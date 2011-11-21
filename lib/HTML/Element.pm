@@ -1846,10 +1846,17 @@ sub as_XML {
                     }     # otherwise it will have been an <... /> tag.
                 }
             }
-            else {        # it's just text
-                _xml_escape($node);
+            elsif( $node=~ /<!\[CDATA\[/)  # the content includes CDATA
+              { 
+                foreach my $chunk (split /(<!\[CDATA\[.*?\]\]>)/, $node) # chunks are CDATA sections or normal text
+                  { if( $chunk !~ /<!\[CDATA\[/) { local $encoded_content=1; _xml_escape( $chunk); }
+                    push @xml, $chunk; 
+                  }
+              }
+            else   # it's just text
+              { _xml_escape($node); 
                 push( @xml, $node );
-            }
+              }
             1;            # keep traversing
         }
     );
@@ -1863,7 +1870,6 @@ sub _xml_escape {
 # Five required escapes: http://www.w3.org/TR/2006/REC-xml11-20060816/#syntax
 # We allow & if it's part of a valid escape already: http://www.w3.org/TR/2006/REC-xml11-20060816/#sec-references
     foreach my $x (@_) {
-
         # In strings with no encoded entities all & should be encoded.
         if ($encoded_content) {
             $x
